@@ -11,7 +11,6 @@
 
 html{
   height:100%;
-  /* Hack Safari iOS : expose la hauteur RÉELLE visible */
   height:-webkit-fill-available;
 }
 body{
@@ -24,11 +23,9 @@ body{
   overflow:hidden;
 }
 
-/* ── MOBILE : plein écran absolu ─────────────────────────────────────
-   Ordre de priorité :
-   1. 100svh  — Safari 15.4+ (hauteur "petite" = barre visible = safe)
-   2. calc(var(--vh)*100) — JS fallback pour iOS < 15.4 et Android
-   3. 100vh   — fallback final
+/* ── DÉFAUT = MOBILE plein écran ─────────────────────────────────────
+   Tous les navigateurs commencent ici.
+   La classe .desktop est ajoutée par JS UNIQUEMENT si touchpoints=0 + grand écran.
 */
 #wrap{
   position:fixed;
@@ -48,25 +45,25 @@ body{
   height:calc(var(--vh,1vh)*100);
   background:var(--bg);
   overflow:hidden;
-  border-radius:0 !important;
-  box-shadow:none !important;
+  border-radius:0;
+  box-shadow:none;
 }
 
-/* ── DESKTOP uniquement — frame téléphone
-   double condition: grand écran ET souris (pas tablette/phone) */
-@media(min-width:1024px) and (pointer:fine){
-  body{background:#0d0d0d;overflow:auto}
-  #wrap{
-    position:static;
-    height:100vh;
-    background:#0d0d0d;
-  }
-  #app{
-    width:390px !important;
-    height:min(844px,calc(100vh - 60px)) !important;
-    border-radius:44px !important;
-    box-shadow:0 0 0 1px rgba(255,255,255,.07),0 32px 80px rgba(0,0,0,.9) !important;
-  }
+/* ── DESKTOP : activé uniquement par JS via body.desktop ─────────────
+   Condition : maxTouchPoints === 0 ET largeur écran >= 1024px
+   Brave/Chrome Android ne passera JAMAIS ici car maxTouchPoints > 0.
+*/
+body.desktop{background:#0d0d0d;overflow:auto}
+body.desktop #wrap{
+  position:static;
+  height:100vh;
+  background:#0d0d0d;
+}
+body.desktop #app{
+  width:390px;
+  height:min(844px,calc(100vh - 60px));
+  border-radius:44px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.07),0 32px 80px rgba(0,0,0,.9);
 }
 
 /* SCREENS - key fix: use display none/flex instead of opacity+position */
@@ -169,15 +166,31 @@ body{
 .toast{position:absolute;bottom:76px;left:50%;transform:translateX(-50%) translateY(12px);background:rgba(18,16,14,.96);border:1px solid rgba(200,162,106,.3);border-radius:12px;padding:12px 22px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--a);white-space:nowrap;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:100}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
-<!-- setVh dans le <head> : s'exécute avant le premier paint, évite le flash de hauteur incorrecte -->
+<!-- Détection desktop + setVh dans le <head> : avant le premier paint -->
 <script>
 (function(){
+  // ── setVh : hauteur réelle sur iOS/Android ──────────────────
   function setVh(){
-    document.documentElement.style.setProperty('--vh', (window.innerHeight*0.01)+'px');
+    document.documentElement.style.setProperty('--vh',(window.innerHeight*0.01)+'px');
   }
   setVh();
-  window.addEventListener('resize', setVh);
-  window.addEventListener('orientationchange', function(){ setTimeout(setVh,150); });
+  window.addEventListener('resize',setVh);
+  window.addEventListener('orientationchange',function(){setTimeout(setVh,150);});
+
+  // ── Détection desktop FIABLE ────────────────────────────────
+  // On est desktop SI ET SEULEMENT SI :
+  //   1. Aucun point de toucher (maxTouchPoints===0) — les téléphones ont toujours ≥1
+  //   2. Largeur écran physique ≥ 1024px
+  // Brave/Chrome/Firefox Android : maxTouchPoints ≥ 1 → jamais .desktop
+  // Safari iOS : maxTouchPoints ≥ 1 → jamais .desktop
+  var hasTouch = (navigator.maxTouchPoints > 0) || ('ontouchstart' in window);
+  var isWide   = screen.width >= 1024;
+  if (!hasTouch && isWide) {
+    document.body ? document.body.classList.add('desktop')
+                  : document.addEventListener('DOMContentLoaded',function(){
+                      document.body.classList.add('desktop');
+                    });
+  }
 })();
 </script>
 </head>
