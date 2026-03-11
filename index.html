@@ -2,41 +2,68 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Yuki</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,600;1,700&family=DM+Sans:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&family=Barlow+Condensed:wght@700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--a:#C8A26A;--bg:#090909;--w:#F0EAE0;--d:rgba(240,234,224,.36);--d2:rgba(240,234,224,.15);--br:rgba(255,255,255,.07)}
-html{height:100%;height:-webkit-fill-available}
-body{height:100%;height:-webkit-fill-available;background:var(--bg);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
 
-/* MOBILE : plein écran, sans cadre */
+html{
+  height:100%;
+  height:-webkit-fill-available;
+}
+body{
+  height:100%;
+  height:-webkit-fill-available;
+  margin:0;padding:0;
+  background:var(--bg);
+  font-family:'DM Sans',sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+
+/* ── DÉFAUT = MOBILE plein écran ─────────────────────────────────────
+   Tous les navigateurs commencent ici.
+   La classe .desktop est ajoutée par JS UNIQUEMENT si touchpoints=0 + grand écran.
+*/
 #wrap{
-  width:100%;height:100vh;height:100dvh;
+  position:fixed;
+  inset:0;
   display:flex;align-items:center;justify-content:center;
   background:var(--bg);
+  width:100%;
+  height:100vh;
+  height:100svh;
+  height:calc(var(--vh,1vh)*100);
 }
 #app{
   position:relative;
   width:100%;
-  height:100vh;height:100dvh;
+  height:100vh;
+  height:100svh;
+  height:calc(var(--vh,1vh)*100);
   background:var(--bg);
   overflow:hidden;
   border-radius:0;
+  box-shadow:none;
 }
 
-/* DESKTOP uniquement : frame téléphone centré */
-@media(min-width:600px){
-  body{background:#0d0d0d}
-  #wrap{background:#0d0d0d}
-  #app{
-    width:390px;
-    height:min(844px,calc(100vh - 40px));
-    height:min(844px,calc(100dvh - 40px));
-    border-radius:44px;
-    box-shadow:0 0 0 1px rgba(255,255,255,.07),0 32px 80px rgba(0,0,0,.9);
-  }
+/* ── DESKTOP : activé uniquement par JS via body.desktop ─────────────
+   Condition : maxTouchPoints === 0 ET largeur écran >= 1024px
+   Brave/Chrome Android ne passera JAMAIS ici car maxTouchPoints > 0.
+*/
+body.desktop{background:#0d0d0d;overflow:auto}
+body.desktop #wrap{
+  position:static;
+  height:100vh;
+  background:#0d0d0d;
+}
+body.desktop #app{
+  width:390px;
+  height:min(844px,calc(100vh - 60px));
+  border-radius:44px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.07),0 32px 80px rgba(0,0,0,.9);
 }
 
 /* SCREENS - key fix: use display none/flex instead of opacity+position */
@@ -139,6 +166,33 @@ body{height:100%;height:-webkit-fill-available;background:var(--bg);font-family:
 .toast{position:absolute;bottom:76px;left:50%;transform:translateX(-50%) translateY(12px);background:rgba(18,16,14,.96);border:1px solid rgba(200,162,106,.3);border-radius:12px;padding:12px 22px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--a);white-space:nowrap;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:100}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
+<!-- Détection desktop + setVh dans le <head> : avant le premier paint -->
+<script>
+(function(){
+  // ── setVh : hauteur réelle sur iOS/Android ──────────────────
+  function setVh(){
+    document.documentElement.style.setProperty('--vh',(window.innerHeight*0.01)+'px');
+  }
+  setVh();
+  window.addEventListener('resize',setVh);
+  window.addEventListener('orientationchange',function(){setTimeout(setVh,150);});
+
+  // ── Détection desktop FIABLE ────────────────────────────────
+  // On est desktop SI ET SEULEMENT SI :
+  //   1. Aucun point de toucher (maxTouchPoints===0) — les téléphones ont toujours ≥1
+  //   2. Largeur écran physique ≥ 1024px
+  // Brave/Chrome/Firefox Android : maxTouchPoints ≥ 1 → jamais .desktop
+  // Safari iOS : maxTouchPoints ≥ 1 → jamais .desktop
+  var hasTouch = (navigator.maxTouchPoints > 0) || ('ontouchstart' in window);
+  var isWide   = screen.width >= 1024;
+  if (!hasTouch && isWide) {
+    document.body ? document.body.classList.add('desktop')
+                  : document.addEventListener('DOMContentLoaded',function(){
+                      document.body.classList.add('desktop');
+                    });
+  }
+})();
+</script>
 </head>
 <body>
 <div id="wrap"><div id="app">
